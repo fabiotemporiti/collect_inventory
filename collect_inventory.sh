@@ -368,12 +368,30 @@ network_info() {
     fi
   elif [[ $PLATFORM == "freebsd" ]]; then
     if command_exists ifconfig; then
+      local iface
       for iface in $(ifconfig -l); do
-        echo "  Interface: $iface"
+        [[ -z $iface ]] && continue
+        if [[ $iface == lo* ]]; then
+          continue
+        fi
+        local role=""
+        case "$iface" in
+          tail*|ts*|tailscale*)
+            role="Tailscale"
+            ;;
+          wg*|tun*)
+            role="Tunnel"
+            ;;
+        esac
+        if [[ -n $role ]]; then
+          printf "  Interface: %s (%s)\n" "$iface" "$role"
+        else
+          printf "  Interface: %s\n" "$iface"
+        fi
         ifconfig "$iface" | awk '
-          /ether/ {printf "    MAC: %s\n", $2}
-          /inet / {printf "    IPv4: %s\n", $2}
-          /inet6/ {printf "    IPv6: %s\n", $2}
+          $1=="ether" {printf "    MAC: %s\n", $2}
+          $1=="inet" {printf "    IPv4: %s\n", $2}
+          $1=="inet6" {printf "    IPv6: %s\n", $2}
         '
       done
     else

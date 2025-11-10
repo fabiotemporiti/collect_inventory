@@ -19,21 +19,23 @@ The script writes a report such as `collect_inventory_20250218_143015.txt` in th
 
 ## Remote Execution
 
-Fetch the latest version directly from GitHub (`https://github.com/fabiotemporiti/collect_inventory`) and run:
+Fetch the latest version directly from GitHub (`https://github.com/fabiotemporiti/collect_inventory`) and run the command appropriate for your OS.
+
+**Linux**
 
 ```bash
-# Linux
 curl -fsSL https://raw.githubusercontent.com/fabiotemporiti/collect_inventory/main/collect_inventory.sh | bash
-
-# FreeBSD (uses the built-in fetch utility)
-fetch -o - https://raw.githubusercontent.com/fabiotemporiti/collect_inventory/main/collect_inventory.sh | bash
-```
-
-Add `--no-network`, `--no-gpu`, or `--skip-install` flags after `bash` to skip sections or dependency prompts:
-
-```bash
 curl -fsSL https://raw.githubusercontent.com/fabiotemporiti/collect_inventory/main/collect_inventory.sh | bash -s -- --skip-install --no-gpu
 ```
+
+**FreeBSD**
+
+```bash
+fetch -o - https://raw.githubusercontent.com/fabiotemporiti/collect_inventory/main/collect_inventory.sh | bash
+fetch -o - https://raw.githubusercontent.com/fabiotemporiti/collect_inventory/main/collect_inventory.sh | bash -s -- --skip-install --no-network
+```
+
+The second command in each block shows how to append flags (e.g., `--skip-install`, `--no-network`, `--no-gpu`) after `bash -s --` to skip sections or dependency prompts.
 
 ## Dependency Prompts
 
