@@ -26,6 +26,28 @@ case "$UNAME_S" in
     ;;
 esac
 
+detect_raspberry_model() {
+  local model=""
+  if [[ $PLATFORM == "linux" ]]; then
+    for f in /sys/firmware/devicetree/base/model /proc/device-tree/model; do
+      if [[ -r $f ]]; then
+        model=$(tr -d '\0' < "$f")
+        break
+      fi
+    done
+    if [[ -z $model && -r /proc/cpuinfo ]]; then
+      model=$(grep -i 'model' /proc/cpuinfo | awk -F: '{print $2}' | head -n1 | sed 's/^ *//')
+    fi
+  elif [[ $PLATFORM == "freebsd" ]]; then
+    model=$(sysctl -n hw.model 2>/dev/null || true)
+  fi
+  if [[ -n $model && "$model" =~ [Rr]aspberry ]]; then
+    echo "$model"
+  fi
+}
+
+RASPBERRY_MODEL=$(detect_raspberry_model 2>/dev/null || echo "")
+
 declare -A CMD_PACKAGE_MAP=(
   [lsblk]="util-linux"
   [lscpu]="util-linux"
@@ -105,13 +127,13 @@ prompt_install() {
             sudo "$pm" update
             APT_UPDATED=true
           fi
-          sudo "$pm" install "$pkg"
+          sudo "$pm" install -y "$pkg"
           ;;
         dnf|yum|zypper)
-          sudo "$pm" install "$pkg"
+          sudo "$pm" install -y "$pkg"
           ;;
         pacman)
-          sudo pacman -Sy "$pkg"
+          sudo pacman -Sy --noconfirm "$pkg"
           ;;
         pkg)
           sudo pkg install -y "$pkg"
@@ -198,6 +220,9 @@ hardware_info() {
       serial="(run with sudo and install dmidecode to fetch serial)"
     fi
     print_kv "Serial" "$serial"
+    if [[ -n $RASPBERRY_MODEL ]]; then
+      print_kv "Raspberry Pi" "$RASPBERRY_MODEL"
+    fi
   elif [[ $PLATFORM == "freebsd" ]]; then
     local vendor model serial bios
     vendor=$(kenv -q smbios.system.maker 2>/dev/null || sysctl -n hw.vendor 2>/dev/null || echo "n/a")
@@ -208,6 +233,9 @@ hardware_info() {
     print_kv "Model" "$model"
     print_kv "BIOS" "$bios"
     print_kv "Serial" "$serial"
+    if [[ -n $RASPBERRY_MODEL ]]; then
+      print_kv "Raspberry Pi" "$RASPBERRY_MODEL"
+    fi
   else
     print_kv "Info" "Unsupported platform for hardware details."
   fi
