@@ -376,43 +376,39 @@ network_info() {
     route_bin=$(command -v route 2>/dev/null || command -v /sbin/route 2>/dev/null || echo "")
 
     if [[ -n $ifconfig_bin ]]; then
-      local iflist default_if tailscale_if iface
-      iflist=$("$ifconfig_bin" -l 2>/dev/null | tr ' ' '\n')
+      local default_if tailscale_if
       [[ -n $route_bin ]] && default_if=$("$route_bin" -n get default 2>/dev/null | awk '/interface:/{print $2}' | head -n1)
-      tailscale_if=$(echo "$iflist" | grep -E '^tailscale[0-9]+$' | head -n1)
+      tailscale_if=$("$ifconfig_bin" -a | awk -F: '/^tailscale[0-9]+:/ {print $1}' | head -n1)
 
-      for iface in $iflist; do
-        [[ -z $iface ]] && continue
-        local details status role=""
-        details=$("$ifconfig_bin" "$iface" 2>/dev/null)
-        [[ -z $details ]] && continue
-        status=$(awk '/status:/{print $2; exit}' <<<"$details")
-        # Skip inactive loopback interfaces with no useful addresses
-        if [[ $iface == lo* && $status != "active" ]]; then
-          continue
-        fi
-        if [[ $iface == "$default_if" ]]; then
-          role="LAN/Default"
-        fi
-        if [[ -n $tailscale_if && $iface == "$tailscale_if" ]]; then
-          role="Tailscale"
-        elif [[ $iface =~ ^(tail|ts|wg|tun) ]]; then
-          role="Tunnel"
-        fi
-        if [[ -n $role ]]; then
-          printf "  Interface: %s (%s)\n" "$iface" "$role"
-        else
-          printf "  Interface: %s\n" "$iface"
-        fi
-        awk '
-          $1=="ether" {printf "    MAC: %s\n", $2}
-          $1=="inet" {printf "    IPv4: %s\n", $2}
-          $1=="inet6" {printf "    IPv6: %s\n", $2}
-        ' <<<"$details"
-        if [[ -n $status ]]; then
-          printf "    Status: %s\n" "$status"
-        fi
-      done
+      "$ifconfig_bin" -a | awk -v def="$default_if" -v tail="$tailscale_if" '
+        /^[a-zA-Z0-9_.-]+:/ {
+          iface=$1
+          sub(/:$/,"",iface)
+          if (iface ~ /^lo/ && status != "active") next
+          if (have_iface) print ""
+          have_iface=1
+          role=""
+          if (iface==def) role="LAN/Default"
+          else if (iface==tail) role="Tailscale"
+          else if (iface ~ /^(tail|ts|wg|tun)/) role="Tunnel"
+          printf("  Interface: %s", iface)
+          if (role!="") printf(" (%s)", role)
+          printf("\n")
+          next
+        }
+        /ether[ \t]+([0-9a-f:]+)/ {
+          printf "    MAC: %s\n", $2
+        }
+        /inet[ \t]+([0-9.]+)/ {
+          printf "    IPv4: %s\n", $2
+        }
+        /inet6[ \t]+([0-9a-f:]+)/ {
+          printf "    IPv6: %s\n", $2
+        }
+        /status:[ \t]+/ {
+          printf "    status %s\n", $2
+        }
+      '
     else
       echo "  ifconfig missing; install net-tools to list interfaces."
     fi
