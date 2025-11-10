@@ -121,22 +121,26 @@ prompt_install() {
   read -r -p "Install package '$pkg' with $pm to enable '$cmd'? [y/N]: " answer
   case $answer in
     [yY][eE][sS]|[yY])
+      local runner="sudo"
+      if [[ $PLATFORM == "freebsd" && -x /usr/local/bin/doas ]]; then
+        runner="doas"
+      fi
       case $pm in
         apt|apt-get)
           if [[ $APT_UPDATED == false ]]; then
-            sudo "$pm" update
+            "$runner" "$pm" update
             APT_UPDATED=true
           fi
-          sudo "$pm" install -y "$pkg"
+          "$runner" "$pm" install -y "$pkg"
           ;;
         dnf|yum|zypper)
-          sudo "$pm" install -y "$pkg"
+          "$runner" "$pm" install -y "$pkg"
           ;;
         pacman)
-          sudo pacman -Sy --noconfirm "$pkg"
+          "$runner" pacman -Sy --noconfirm "$pkg"
           ;;
         pkg)
-          sudo pkg install -y "$pkg"
+          "$runner" pkg install -y "$pkg"
           ;;
         *)
           echo "Package manager '$pm' not handled automatically. Install '$pkg' manually."
@@ -368,21 +372,20 @@ network_info() {
     fi
   elif [[ $PLATFORM == "freebsd" ]]; then
     if command_exists ifconfig; then
-      local iface
+      local default_if tailscale_if iface
+      default_if=$(route -n get default 2>/dev/null | awk '/interface:/{print $2}' | head -n1)
+      tailscale_if=$(ifconfig -l | tr ' ' '\n' | grep -E '^tailscale[0-9]+$' | head -n1)
       for iface in $(ifconfig -l); do
         [[ -z $iface ]] && continue
-        if [[ $iface == lo* ]]; then
-          continue
-        fi
         local role=""
-        case "$iface" in
-          tail*|ts*|tailscale*)
-            role="Tailscale"
-            ;;
-          wg*|tun*)
-            role="Tunnel"
-            ;;
-        esac
+        if [[ $iface == "$default_if" ]]; then
+          role="LAN/Default"
+        fi
+        if [[ -n $tailscale_if && $iface == "$tailscale_if" ]]; then
+          role="Tailscale"
+        elif [[ $iface =~ ^(tail|ts|wg|tun) ]]; then
+          role="Tunnel"
+        fi
         if [[ -n $role ]]; then
           printf "  Interface: %s (%s)\n" "$iface" "$role"
         else

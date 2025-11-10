@@ -25,21 +25,21 @@ Fetch the latest version directly from GitHub (`https://github.com/fabiotemporit
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/fabiotemporiti/collect_inventory/main/collect_inventory.sh | bash
-curl -fsSL https://raw.githubusercontent.com/fabiotemporiti/collect_inventory/main/collect_inventory.sh | bash -s -- --skip-install --no-gpu
 ```
 
 **FreeBSD**
 
 ```bash
 fetch -o - https://raw.githubusercontent.com/fabiotemporiti/collect_inventory/main/collect_inventory.sh | bash
-fetch -o - https://raw.githubusercontent.com/fabiotemporiti/collect_inventory/main/collect_inventory.sh | bash -s -- --skip-install --no-network
 ```
 
-The second command in each block shows how to append flags (e.g., `--skip-install`, `--no-network`, `--no-gpu`) after `bash -s --` to skip sections or dependency prompts.
+Add flags such as `--skip-install`, `--no-network`, or `--no-gpu` after `bash -s --` if you need to skip sections or dependency prompts.
 
 ## Dependency Prompts
 
 Missing helpers (`ip`, `lspci`, `dmidecode`, etc.) trigger an interactive prompt that detects your package manager (apt, apt-get, dnf, yum, pacman, zypper, or pkg on FreeBSD) and asks whether to install the required package. Respond `y` to run the suggested command; press Enter to skip and proceed with reduced output.
+
+On FreeBSD the script automatically prefers `doas` over `sudo` when installing packages.
 
 ## FreeBSD Notes
 
