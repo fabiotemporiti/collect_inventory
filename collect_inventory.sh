@@ -3,6 +3,7 @@
 # Collects OS and hardware information and stores it in a timestamped report.
 # Can be fetched remotely, e.g.:
 #   curl -fsSL https://raw.githubusercontent.com/fabiotemporiti/collect_inventory/main/collect_inventory.sh | bash
+#   fetch -o - https://raw.githubusercontent.com/fabiotemporiti/collect_inventory/main/collect_inventory.sh | bash
 
 set -u
 IFS=$'\n\t'
@@ -35,7 +36,6 @@ declare -A CMD_PACKAGE_MAP=(
   [ifconfig]="net-tools"
   [geom]="geom"
   [kenv]="kenv"
-  [curl]="curl"
   [sysctl]="procps"
 )
 
@@ -412,7 +412,7 @@ if [[ $PLATFORM == "linux" ]]; then
 elif [[ $PLATFORM == "freebsd" ]]; then
   $INCLUDE_GPU && ALL_COMMANDS+=("pciconf")
 fi
-ALL_COMMANDS+=("dmidecode" "curl")
+ALL_COMMANDS+=("dmidecode")
 
 if [[ $ALLOW_INSTALL == true ]]; then
   for cmd in "${ALL_COMMANDS[@]}"; do

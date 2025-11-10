@@ -12,17 +12,21 @@ chmod +x collect_inventory.sh
 
 The script writes a report such as `collect_inventory_20250218_143015.txt` in the same directory and echoes the path at the end.
 
-## Curl + Pipe Execution
+## Required Packages
+
+- **Linux:** Bash (usually preinstalled), `util-linux` (for `lsblk`/`lscpu`), `pciutils` (`lspci`), `iproute2` (`ip`), and `dmidecode` for serial numbers.
+- **FreeBSD:** Install Bash (`pkg install bash`) and `dmidecode`. The remaining utilities (`sysctl`, `ifconfig`, `pciconf`, `geom`, `kenv`, `swapinfo`, `gpart`) are part of the base system.
+
+## Remote Execution
 
 Fetch the latest version directly from GitHub (`https://github.com/fabiotemporiti/collect_inventory`) and run:
 
 ```bash
-# Linux (curl di solito è già installato)
+# Linux
 curl -fsSL https://raw.githubusercontent.com/fabiotemporiti/collect_inventory/main/collect_inventory.sh | bash
 
-# FreeBSD (installa curl la prima volta, poi usa lo stesso comando)
-sudo pkg install -y curl
-curl -fsSL https://raw.githubusercontent.com/fabiotemporiti/collect_inventory/main/collect_inventory.sh | bash
+# FreeBSD (uses the built-in fetch utility)
+fetch -o - https://raw.githubusercontent.com/fabiotemporiti/collect_inventory/main/collect_inventory.sh | bash
 ```
 
 Add `--no-network`, `--no-gpu`, or `--skip-install` flags after `bash` to skip sections or dependency prompts:
