@@ -377,7 +377,14 @@ network_info() {
       tailscale_if=$(ifconfig -l | tr ' ' '\n' | grep -E '^tailscale[0-9]+$' | head -n1)
       for iface in $(ifconfig -l); do
         [[ -z $iface ]] && continue
-        local role=""
+        local details status role=""
+        details=$(ifconfig "$iface" 2>/dev/null)
+        [[ -z $details ]] && continue
+        status=$(awk '/status:/{print $2; exit}' <<<"$details")
+        # Skip inactive loopback interfaces with no useful addresses
+        if [[ $iface == lo* && $status != "active" ]]; then
+          continue
+        fi
         if [[ $iface == "$default_if" ]]; then
           role="LAN/Default"
         fi
@@ -391,11 +398,14 @@ network_info() {
         else
           printf "  Interface: %s\n" "$iface"
         fi
-        ifconfig "$iface" | awk '
+        awk '
           $1=="ether" {printf "    MAC: %s\n", $2}
           $1=="inet" {printf "    IPv4: %s\n", $2}
           $1=="inet6" {printf "    IPv6: %s\n", $2}
-        '
+        ' <<<"$details"
+        if [[ -n $status ]]; then
+          printf "    Status: %s\n" "$status"
+        fi
       done
     else
       echo "  ifconfig missing; install net-tools to list interfaces."
