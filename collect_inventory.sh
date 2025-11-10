@@ -371,14 +371,20 @@ network_info() {
       echo "  ip command missing; install iproute2 to list interfaces."
     fi
   elif [[ $PLATFORM == "freebsd" ]]; then
-    if command_exists ifconfig; then
-      local default_if tailscale_if iface
-      default_if=$(route -n get default 2>/dev/null | awk '/interface:/{print $2}' | head -n1)
-      tailscale_if=$(ifconfig -l | tr ' ' '\n' | grep -E '^tailscale[0-9]+$' | head -n1)
-      for iface in $(ifconfig -l); do
+    local ifconfig_bin route_bin
+    ifconfig_bin=$(command -v ifconfig 2>/dev/null || command -v /sbin/ifconfig 2>/dev/null || echo "")
+    route_bin=$(command -v route 2>/dev/null || command -v /sbin/route 2>/dev/null || echo "")
+
+    if [[ -n $ifconfig_bin ]]; then
+      local iflist default_if tailscale_if iface
+      iflist=$("$ifconfig_bin" -l 2>/dev/null | tr ' ' '\n')
+      [[ -n $route_bin ]] && default_if=$("$route_bin" -n get default 2>/dev/null | awk '/interface:/{print $2}' | head -n1)
+      tailscale_if=$(echo "$iflist" | grep -E '^tailscale[0-9]+$' | head -n1)
+
+      for iface in $iflist; do
         [[ -z $iface ]] && continue
         local details status role=""
-        details=$(ifconfig "$iface" 2>/dev/null)
+        details=$("$ifconfig_bin" "$iface" 2>/dev/null)
         [[ -z $details ]] && continue
         status=$(awk '/status:/{print $2; exit}' <<<"$details")
         # Skip inactive loopback interfaces with no useful addresses
